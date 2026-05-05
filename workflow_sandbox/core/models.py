@@ -3,7 +3,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
 
-
 class RunStatus(str, Enum):
     """Possible states for a workflow run."""
 
@@ -12,14 +11,12 @@ class RunStatus(str, Enum):
     FAILED = "failed"
     TIMEOUT = "timeout"
 
-
 class Severity(str, Enum):
     """Simple severity levels for diagnostic findings."""
 
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
-
 
 @dataclass
 class WorkflowTemplate:
@@ -32,7 +29,6 @@ class WorkflowTemplate:
     env_vars: dict[str, str] = field(default_factory=dict)
     timeout_seconds: int = 120
 
-
 @dataclass
 class WorkflowRun:
     """Result captured from a workflow execution."""
@@ -43,7 +39,6 @@ class WorkflowRun:
     stdout: str = ""
     stderr: str = ""
     duration_seconds: float = 0.0
-
 
 @dataclass
 class Finding:

@@ -10,6 +10,7 @@ from workflow_sandbox.core.validation import validate_workflow_template
 
 DATABASE_PATH = Path("workflow_sandbox.db")
 
+
 def main() -> None:
     st.set_page_config(page_title="Workflow Sandbox", layout="wide")
     st.title("Python Workflow Sandbox")
@@ -35,6 +36,7 @@ def main() -> None:
         render_diagnosis_page()
     else:
         render_history_page(database)
+
 
 def build_template_from_form(form_key: str) -> WorkflowTemplate:
     """Collect repeated workflow fields in one place to avoid duplicated UI logic."""
@@ -81,6 +83,7 @@ def build_template_from_form(form_key: str) -> WorkflowTemplate:
         timeout_seconds=int(timeout_seconds),
     )
 
+
 def parse_env_vars(text: str) -> dict[str, str]:
     """Parse key=value lines because the early dashboard uses simple text inputs."""
 
@@ -93,6 +96,7 @@ def parse_env_vars(text: str) -> dict[str, str]:
         key, value = line.split("=", 1)
         env_vars[key.strip()] = value.strip()
     return env_vars
+
 
 def render_template_page(database: WorkflowDatabase) -> None:
     st.header("Workflow Template")
@@ -130,6 +134,7 @@ def render_template_page(database: WorkflowDatabase) -> None:
                 ]
             )
 
+
 def render_dockerfile_page() -> None:
     st.header("Dockerfile Preview")
     st.caption("Preview the container definition before workflow execution is added.")
@@ -144,6 +149,7 @@ def render_dockerfile_page() -> None:
 
     # Previewing the generated Dockerfile to audit before running
     st.code(generate_dockerfile(template), language="dockerfile")
+
 
 def render_diagnosis_page() -> None:
     st.header("Diagnose Logs")
@@ -175,6 +181,7 @@ def render_diagnosis_page() -> None:
         st.write(finding.message)
         st.info(finding.suggested_fix)
 
+
 def render_history_page(database: WorkflowDatabase) -> None:
     st.header("Run History")
     st.caption("Stored workflow runs will appear here after execution is connected.")
@@ -197,6 +204,7 @@ def render_history_page(database: WorkflowDatabase) -> None:
             for run in runs
         ]
     )
+
 
 if __name__ == "__main__":
     main()

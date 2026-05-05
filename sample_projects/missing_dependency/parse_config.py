@@ -7,4 +7,3 @@ def load_config(raw: str):
 
 if __name__ == "__main__":
     print(load_config("enabled: true"))
-

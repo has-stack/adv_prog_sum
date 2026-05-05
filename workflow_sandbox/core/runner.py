@@ -8,10 +8,17 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from workflow_sandbox.core.diagnosis import diagnose_output
 from workflow_sandbox.core.dockerfile import generate_dockerfile
-from workflow_sandbox.core.models import Finding, RunStatus, WorkflowRun, WorkflowTemplate
+from workflow_sandbox.core.models import (
+    Finding,
+    RunStatus,
+    WorkflowRun,
+    WorkflowTemplate,
+)
+
 
 class DockerUnavailableError(RuntimeError):
     """Raised when the Docker CLI is not available to the application."""
+
 
 def run_workflow_in_docker(
     template: WorkflowTemplate,
@@ -22,7 +29,9 @@ def run_workflow_in_docker(
     # Path data structure needed for different OS
     project_path = Path(project_path)
     if not project_path.exists() or not project_path.is_dir():
-        raise ValueError(f"Project path does not exist or is not a directory: {project_path}")
+        raise ValueError(
+            f"Project path does not exist or is not a directory: {project_path}"
+        )
 
     # Docker requires sudo on many systems, may not be available
     if shutil.which("docker") is None:

@@ -1,16 +1,17 @@
 """Simple failure diagnosis rules for workflow output."""
+
 import re
 
 from workflow_sandbox.core.models import Finding, Severity
 
-_MISSING_MODULE_PATTERN = re.compile(r"ModuleNotFoundError: No module named ['\"]([^'\"]+)['\"]")
+_MISSING_MODULE_PATTERN = re.compile(
+    r"ModuleNotFoundError: No module named ['\"]([^'\"]+)['\"]"
+)
 _MISSING_ENV_PATTERN = re.compile(r"KeyError: ['\"]([A-Z_][A-Z0-9_]*)['\"]")
 _COMMAND_NOT_FOUND_PATTERN = re.compile(r"([a-zA-Z0-9_.+-]+): not found")
 
-_PACKAGE_HINTS = {
-    "yaml": "pyyaml",
-    "cv2": "opencv-python"
-}
+_PACKAGE_HINTS = {"yaml": "pyyaml", "cv2": "opencv-python"}
+
 
 def diagnose_output(
     stdout: str = "",

@@ -3,7 +3,14 @@
 import json
 import sqlite3
 from pathlib import Path
-from workflow_sandbox.core.models import Finding, RunStatus, Severity, WorkflowRun, WorkflowTemplate
+from workflow_sandbox.core.models import (
+    Finding,
+    RunStatus,
+    Severity,
+    WorkflowRun,
+    WorkflowTemplate,
+)
+
 
 class WorkflowDatabase:
     """Small SQLite wrapper for workflow sandbox data."""
@@ -15,8 +22,7 @@ class WorkflowDatabase:
         """Create database tables if they do not already exist."""
 
         with self._connect() as connection:
-            connection.executescript(
-                """
+            connection.executescript("""
                 CREATE TABLE IF NOT EXISTS workflow_templates (
                     name TEXT PRIMARY KEY,
                     python_version TEXT NOT NULL,
@@ -45,8 +51,7 @@ class WorkflowDatabase:
                     suggested_fix TEXT NOT NULL,
                     FOREIGN KEY(run_id) REFERENCES workflow_runs(id)
                 );
-                """
-            )
+                """)
 
     def save_template(self, template: WorkflowTemplate) -> None:
         """Store or replace a workflow template."""
@@ -72,13 +77,11 @@ class WorkflowDatabase:
         """Return stored workflow templates by name."""
 
         with self._connect() as connection:
-            rows = connection.execute(
-                """
+            rows = connection.execute("""
                 SELECT name, python_version, commands_json, requirements_file, env_vars_json, timeout_seconds
                 FROM workflow_templates
                 ORDER BY name
-                """
-            ).fetchall()
+                """).fetchall()
 
         return [
             WorkflowTemplate(
@@ -136,13 +139,11 @@ class WorkflowDatabase:
         """Return stored workflow runs newest first."""
 
         with self._connect() as connection:
-            rows = connection.execute(
-                """
+            rows = connection.execute("""
                 SELECT id, workflow_name, status, exit_code, stdout, stderr, duration_seconds
                 FROM workflow_runs
                 ORDER BY id DESC
-                """
-            ).fetchall()
+                """).fetchall()
 
         return [
             WorkflowRun(

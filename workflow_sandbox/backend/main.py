@@ -1,4 +1,5 @@
 """Backend API for the workflow sandbox."""
+
 """Creates api endpoints."""
 
 from pathlib import Path
@@ -14,9 +15,11 @@ app = FastAPI(title="Python Workflow Sandbox")
 database = WorkflowDatabase(Path("workflow_sandbox.db"))
 database.initialise()
 
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
 
 @app.post("/templates")
 def save_template(template: WorkflowTemplate) -> dict[str, str]:
@@ -27,9 +30,11 @@ def save_template(template: WorkflowTemplate) -> dict[str, str]:
     database.save_template(template)
     return {"status": "saved", "name": template.name}
 
+
 @app.get("/templates")
 def list_templates() -> list[WorkflowTemplate]:
     return database.list_templates()
+
 
 @app.post("/dockerfile/preview")
 def preview_dockerfile(template: WorkflowTemplate) -> dict[str, str]:
@@ -39,6 +44,7 @@ def preview_dockerfile(template: WorkflowTemplate) -> dict[str, str]:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
     return {"dockerfile": dockerfile}
+
 
 @app.post("/diagnose")
 def diagnose(payload: dict) -> dict:
@@ -50,6 +56,7 @@ def diagnose(payload: dict) -> dict:
     )
     return {"findings": findings}
 
+
 @app.get("/runs")
 def list_runs() -> dict:
     return {"runs": database.list_runs()}
@@ -60,13 +67,19 @@ def run_workflow(payload: dict) -> dict:
     try:
         template = WorkflowTemplate(**payload["template"])
     except KeyError as error:
-        raise HTTPException(status_code=400, detail="Request body must include a template.") from error
+        raise HTTPException(
+            status_code=400, detail="Request body must include a template."
+        ) from error
     except TypeError as error:
-        raise HTTPException(status_code=400, detail="Template fields are invalid.") from error
+        raise HTTPException(
+            status_code=400, detail="Template fields are invalid."
+        ) from error
 
     project_path = payload.get("project_path")
     if not project_path:
-        raise HTTPException(status_code=400, detail="Request body must include a project_path.")
+        raise HTTPException(
+            status_code=400, detail="Request body must include a project_path."
+        )
 
     errors = validate_workflow_template(template)
     if errors:

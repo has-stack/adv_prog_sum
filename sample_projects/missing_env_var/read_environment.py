@@ -7,4 +7,3 @@ def get_test_root() -> str:
 
 if __name__ == "__main__":
     print(get_test_root())
-

@@ -5,6 +5,7 @@ import json
 from workflow_sandbox.core.models import WorkflowTemplate
 from workflow_sandbox.core.validation import validate_workflow_template
 
+
 def generate_dockerfile(template: WorkflowTemplate) -> str:
     """Create a Dockerfile string for a workflow template."""
 

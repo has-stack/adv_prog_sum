@@ -9,6 +9,7 @@ from workflow_sandbox.core.models import WorkflowTemplate
 _WORKFLOW_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]{2,63}$")
 _ENV_VAR_PATTERN = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 
+
 def validate_workflow_template(template: WorkflowTemplate) -> list[str]:
     """Return validation errors for a workflow template."""
 

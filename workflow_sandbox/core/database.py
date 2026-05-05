@@ -89,7 +89,7 @@ class WorkflowDatabase:
                 env_vars=json.loads(row["env_vars_json"]),
                 timeout_seconds=row["timeout_seconds"],
             )
-            for rw in rows
+            for row in rows
         ]
 
     def save_run(self, run: WorkflowRun, findings: list[Finding] | None = None) -> int:

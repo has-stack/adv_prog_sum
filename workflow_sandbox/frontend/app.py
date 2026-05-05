@@ -10,18 +10,35 @@ from workflow_sandbox.core.runner import DockerUnavailableError, run_workflow_in
 from workflow_sandbox.core.validation import validate_workflow_template
 
 DATABASE_PATH = Path("workflow_sandbox.db")
-# Dummy workflows
+# Dummy data
 SAMPLE_PROJECTS = {
     "Passing project": Path("sample_projects/passing_project"),
     "Missing dependency": Path("sample_projects/missing_dependency"),
     "Missing environment variable": Path("sample_projects/missing_env_var"),
     "Failing tests": Path("sample_projects/failing_tests"),
 }
+PYTHON_VERSIONS = ["3.8", "3.9", "3.10", "3.11", "3.12"]
+WORKFLOW_DRAFT_DEFAULTS = {
+    "name": "python-smoke-test",
+    "python_version": "3.11",
+    "requirements_file": "requirements.txt",
+    "commands_text": "python -m unittest discover -s tests",
+    "env_text": "PYTHONPATH=/workspace",
+    "timeout_seconds": 120,
+    "sample_project": "Passing project",
+}
+DIAGNOSIS_DRAFT_DEFAULTS = {
+    "exit_code": 1,
+    "timed_out": False,
+    "stdout": "",
+    "stderr": "ModuleNotFoundError: No module named 'yaml'",
+}
 
 
 def main() -> None:
     st.set_page_config(page_title="Workflow Sandbox", layout="wide")
     st.title("Python Workflow Sandbox")
+    ensure_dashboard_state()
 
     database = WorkflowDatabase(DATABASE_PATH)
     database.initialise()
@@ -52,35 +69,53 @@ def main() -> None:
 def build_template_from_form(form_key: str) -> WorkflowTemplate:
     """Collect repeated workflow fields in one place to avoid duplicated UI logic."""
 
-    name = st.text_input("Workflow name", "python-smoke-test", key=f"{form_key}-name")
+    # Streamlit reruns the script when changing pages. The permanent
+    # workflow_draft values keep the user's current inputs.
+    draft = st.session_state["workflow_draft"]
+
+    name = st.text_input(
+        "Workflow name",
+        draft["name"],
+        key=f"{form_key}-name",
+    )
     python_version = st.selectbox(
         "Python version",
-        ["3.8", "3.9", "3.10", "3.11", "3.12"],
-        index=3,
+        PYTHON_VERSIONS,
+        index=PYTHON_VERSIONS.index(draft["python_version"]),
         key=f"{form_key}-python",
     )
     requirements_file = st.text_input(
         "Requirements file",
-        "requirements.txt",
+        draft["requirements_file"],
         key=f"{form_key}-requirements",
     )
     commands_text = st.text_area(
         "Commands",
-        "python -m unittest discover -s tests",
+        draft["commands_text"],
         key=f"{form_key}-commands",
     )
     env_text = st.text_area(
         "Environment variables",
-        "PYTHONPATH=/workspace",
+        draft["env_text"],
         key=f"{form_key}-env",
     )
     timeout_seconds = st.number_input(
         "Timeout seconds",
         min_value=5,
         max_value=1800,
-        value=120,
+        value=draft["timeout_seconds"],
         key=f"{form_key}-timeout",
     )
+
+    st.session_state["workflow_draft"] = {
+        "name": name,
+        "python_version": python_version,
+        "requirements_file": requirements_file,
+        "commands_text": commands_text,
+        "env_text": env_text,
+        "timeout_seconds": int(timeout_seconds),
+        "sample_project": st.session_state["workflow_draft"]["sample_project"],
+    }
 
     commands = [line.strip() for line in commands_text.splitlines() if line.strip()]
     env_vars = parse_env_vars(env_text)
@@ -93,6 +128,15 @@ def build_template_from_form(form_key: str) -> WorkflowTemplate:
         env_vars=env_vars,
         timeout_seconds=int(timeout_seconds),
     )
+
+
+def ensure_dashboard_state() -> None:
+    """Create page-independent draft state for Streamlit reruns."""
+
+    if "workflow_draft" not in st.session_state:
+        st.session_state["workflow_draft"] = WORKFLOW_DRAFT_DEFAULTS.copy()
+    if "diagnosis_draft" not in st.session_state:
+        st.session_state["diagnosis_draft"] = DIAGNOSIS_DRAFT_DEFAULTS.copy()
 
 
 def parse_env_vars(text: str) -> dict[str, str]:
@@ -166,7 +210,15 @@ def render_run_page(database: WorkflowDatabase) -> None:
     st.header("Run Workflow")
     st.caption("Execute a synthetic Python project inside the Docker sandbox.")
 
-    project_label = st.selectbox("Sample project", list(SAMPLE_PROJECTS))
+    draft = st.session_state["workflow_draft"]
+    project_names = list(SAMPLE_PROJECTS)
+    project_label = st.selectbox(
+        "Sample project",
+        project_names,
+        index=project_names.index(draft["sample_project"]),
+    )
+    st.session_state["workflow_draft"]["sample_project"] = project_label
+
     project_path = SAMPLE_PROJECTS[project_label]
     template = build_template_from_form("run")
     errors = validate_workflow_template(template)
@@ -220,14 +272,21 @@ def render_diagnosis_page() -> None:
     st.header("Diagnose Logs")
     st.caption("Paste workflow output to test the rule-based diagnosis engine.")
 
-    exit_code = st.number_input("Exit code", value=1)
-    timed_out = st.checkbox("Timed out")
-    stdout = st.text_area("stdout", "")
+    diagnosis_draft = st.session_state["diagnosis_draft"]
+    exit_code = st.number_input("Exit code", value=diagnosis_draft["exit_code"])
+    timed_out = st.checkbox("Timed out", value=diagnosis_draft["timed_out"])
+    stdout = st.text_area("stdout", diagnosis_draft["stdout"])
     # Just for demo purposes
     stderr = st.text_area(
         "stderr",
-        "ModuleNotFoundError: No module named 'yaml'",
+        diagnosis_draft["stderr"],
     )
+    st.session_state["diagnosis_draft"] = {
+        "exit_code": int(exit_code),
+        "timed_out": timed_out,
+        "stdout": stdout,
+        "stderr": stderr,
+    }
 
     findings = diagnose_output(
         stdout=stdout,

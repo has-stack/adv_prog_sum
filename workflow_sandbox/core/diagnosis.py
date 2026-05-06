@@ -6,6 +6,8 @@ import re
 from workflow_sandbox.config import DIAGNOSIS_RULES_PATH
 from workflow_sandbox.core.models import Finding, Severity
 
+DOCKER_BUILD_STAGE = "docker_build"
+
 
 def load_diagnosis_rules() -> list[dict]:
     """Load configurable diagnosis rules from JSON."""
@@ -18,6 +20,7 @@ def diagnose_output(
     stderr: str = "",
     exit_code: int | None = None,
     timed_out: bool = False,
+    execution_stage: str | None = None,
 ) -> list[Finding]:
     """Convert workflow output into diagnostic findings."""
 
@@ -25,12 +28,26 @@ def diagnose_output(
     findings: list[Finding] = []
 
     if timed_out:
+        if execution_stage == DOCKER_BUILD_STAGE:
+            category = "docker_build_timeout"
+            message = "The Docker image build exceeded the configured timeout."
+            suggested_fix = (
+                "Inspect dependency installation and Docker build steps before "
+                "increasing the timeout."
+            )
+        else:
+            category = "timeout"
+            message = "The workflow exceeded the configured timeout."
+            suggested_fix = (
+                "Inspect long-running commands before increasing the timeout."
+            )
+
         findings.append(
             Finding(
-                category="timeout",
+                category=category,
                 severity=Severity.HIGH,
-                message="The workflow exceeded the configured timeout.",
-                suggested_fix="Inspect long-running commands before increasing the timeout.",
+                message=message,
+                suggested_fix=suggested_fix,
             )
         )
 
@@ -41,6 +58,20 @@ def diagnose_output(
         finding = _apply_rule(rule, output)
         if finding:
             findings.append(finding)
+
+    if (
+        not findings
+        and execution_stage == DOCKER_BUILD_STAGE
+        and exit_code not in (None, 0)
+    ):
+        findings.append(
+            Finding(
+                category="docker_build_failure",
+                severity=Severity.HIGH,
+                message="The Docker image failed to build before the workflow could run.",
+                suggested_fix="Inspect the build logs, generated Dockerfile and dependency installation output.",
+            )
+        )
 
     if not findings and exit_code not in (None, 0):
         findings.append(

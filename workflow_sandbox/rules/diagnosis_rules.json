@@ -31,6 +31,33 @@
     "groups": ["command_name"]
   },
   {
+    "name": "docker_permission_denied",
+    "category": "docker_permission_denied",
+    "severity": "high",
+    "pattern": "permission denied while trying to connect to the Docker daemon socket|Got permission denied while trying to connect to the Docker daemon|/var/run/docker\\.sock.*permission denied",
+    "message": "The application could not access the Docker daemon because of a permissions issue.",
+    "suggested_fix": "Check Docker group membership, socket permissions, or run the backend in an environment with Docker access.",
+    "groups": []
+  },
+  {
+    "name": "docker_daemon_unavailable",
+    "category": "docker_daemon_unavailable",
+    "severity": "high",
+    "pattern": "Cannot connect to the Docker daemon|Is the docker daemon running|docker daemon is not running",
+    "message": "The Docker daemon was not reachable.",
+    "suggested_fix": "Start Docker and confirm the current user can run 'docker ps' before rerunning the workflow.",
+    "groups": []
+  },
+  {
+    "name": "docker_image_pull_failure",
+    "category": "docker_image_pull_failure",
+    "severity": "high",
+    "pattern": "failed to resolve source metadata|pull access denied|manifest for .* not found|network timeout",
+    "message": "Docker could not fetch or resolve an image needed for the build.",
+    "suggested_fix": "Check the base image tag, registry access and network connectivity.",
+    "groups": []
+  },
+  {
     "name": "test_failure",
     "category": "test_failure",
     "severity": "medium",

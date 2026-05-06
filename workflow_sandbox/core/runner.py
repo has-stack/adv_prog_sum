@@ -1,9 +1,9 @@
 """Docker-based workflow execution."""
 
+import os
 import shutil
 import subprocess
 import time
-import os
 import uuid
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -13,7 +13,7 @@ from workflow_sandbox.config import (
     DOCKER_IMAGE_PREFIX,
     DOCKERFILE_NAME,
 )
-from workflow_sandbox.core.diagnosis import diagnose_output
+from workflow_sandbox.core.diagnosis import DOCKER_BUILD_STAGE, diagnose_output
 from workflow_sandbox.core.dockerfile import generate_dockerfile
 from workflow_sandbox.core.models import (
     Finding,
@@ -58,15 +58,36 @@ def run_workflow_in_docker(
         docker_env = os.environ.copy()
         docker_env["DOCKER_CONFIG"] = str(docker_config)
 
-        build_result = subprocess.run(
-            [DOCKER_EXECUTABLE, "build", "-t", image_tag, "."],
-            cwd=build_context,
-            env=docker_env,
-            capture_output=True,
-            text=True,
-            timeout=template.timeout_seconds,
-            check=False,
-        )
+        try:
+            build_result = subprocess.run(
+                [DOCKER_EXECUTABLE, "build", "-t", image_tag, "."],
+                cwd=build_context,
+                env=docker_env,
+                capture_output=True,
+                text=True,
+                timeout=template.timeout_seconds,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as error:
+            duration = time.monotonic() - started
+            stdout = _normalise_output(error.stdout)
+            stderr = _normalise_output(error.stderr)
+            run = WorkflowRun(
+                workflow_name=template.name,
+                status=RunStatus.TIMEOUT,
+                exit_code=None,
+                stdout=stdout,
+                stderr=stderr,
+                duration_seconds=duration,
+            )
+            findings = diagnose_output(
+                stdout=stdout,
+                stderr=stderr,
+                exit_code=None,
+                timed_out=True,
+                execution_stage=DOCKER_BUILD_STAGE,
+            )
+            return run, findings
 
         if build_result.returncode != 0:
             duration = time.monotonic() - started
@@ -78,10 +99,14 @@ def run_workflow_in_docker(
                 stderr=build_result.stderr,
                 duration_seconds=duration,
             )
+            # Build failures are different from workflow failures because the
+            # user's command never executes. Passing the stage allows the
+            # diagnosis layer to produce infrastructure guidance.
             findings = diagnose_output(
                 stdout=build_result.stdout,
                 stderr=build_result.stderr,
                 exit_code=build_result.returncode,
+                execution_stage=DOCKER_BUILD_STAGE,
             )
             return run, findings
 

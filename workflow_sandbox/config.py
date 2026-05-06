@@ -16,6 +16,7 @@ DOCKER_IMAGE_PREFIX = "workflow-sandbox"
 DOCKERFILE_NAME = "Dockerfile"
 LOG_LEVEL = "INFO"
 LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
+DASHBOARD_LOG_LIMIT = 200
 
 SUPPORTED_PYTHON_VERSIONS = ["3.8", "3.9", "3.10", "3.11", "3.12"]
 MIN_PYTHON_VERSION = "3.8"

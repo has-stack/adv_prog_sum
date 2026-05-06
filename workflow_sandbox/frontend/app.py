@@ -11,13 +11,17 @@ from workflow_sandbox.config import (
     SAMPLE_PROJECTS,
     SUPPORTED_PYTHON_VERSIONS,
 )
-from workflow_sandbox.logging_config import configure_logging
 from workflow_sandbox.core.database import WorkflowDatabase
 from workflow_sandbox.core.diagnosis import diagnose_output
 from workflow_sandbox.core.dockerfile import generate_dockerfile
 from workflow_sandbox.core.models import WorkflowTemplate
 from workflow_sandbox.core.runner import DockerUnavailableError, run_workflow_in_docker
 from workflow_sandbox.core.validation import validate_workflow_template
+from workflow_sandbox.frontend.dashboard_logging import (
+    capture_dashboard_logs,
+    clear_dashboard_logs,
+)
+from workflow_sandbox.logging_config import configure_logging
 
 configure_logging()
 
@@ -124,6 +128,8 @@ def ensure_dashboard_state() -> None:
         st.session_state["workflow_draft"] = DEFAULT_WORKFLOW_DRAFT.copy()
     if "diagnosis_draft" not in st.session_state:
         st.session_state["diagnosis_draft"] = DEFAULT_DIAGNOSIS_DRAFT.copy()
+    if "dashboard_logs" not in st.session_state:
+        st.session_state["dashboard_logs"] = []
 
 
 def parse_env_vars(text: str) -> dict[str, str]:
@@ -220,39 +226,51 @@ def render_run_page(database: WorkflowDatabase) -> None:
     st.write(f"Project path: `{project_path}`")
 
     if st.button("Run workflow", disabled=bool(errors)):
+        logs = st.session_state["dashboard_logs"]
+        clear_dashboard_logs(logs)
         try:
-            with st.spinner("Building container and running workflow..."):
-                run, findings = run_workflow_in_docker(template, project_path)
+            with capture_dashboard_logs(logs):
+                with st.spinner("Building container and running workflow..."):
+                    run, findings = run_workflow_in_docker(template, project_path)
+                # Capture database persistence logs in the same dashboard view
+                # because save failures are part of the execution lifecycle.
+                run_id = database.save_run(run, findings)
         except DockerUnavailableError as error:
             st.error(str(error))
-            return
         except ValueError as error:
             st.error(str(error))
-            return
-
-        # Persisting immediately after execution means the history dashboard can
-        # show both successful and failed runs. That is important because failed
-        # runs are the evidence needed for support triage.
-        run_id = database.save_run(run, findings)
-
-        st.subheader(f"Run #{run_id}")
-        left, middle, right = st.columns(3)
-        left.metric("Status", run.status.value)
-        middle.metric("Exit code", "None" if run.exit_code is None else run.exit_code)
-        right.metric("Duration", f"{run.duration_seconds:.2f}s")
-
-        with st.expander("stdout"):
-            st.code(run.stdout or "(empty)")
-        with st.expander("stderr"):
-            st.code(run.stderr or "(empty)")
-
-        if findings:
-            st.subheader("Findings")
-            for finding in findings:
-                st.warning(f"{finding.category}: {finding.message}")
-                st.info(finding.suggested_fix)
         else:
-            st.success("No findings were generated.")
+            st.subheader(f"Run #{run_id}")
+            left, middle, right = st.columns(3)
+            left.metric("Status", run.status.value)
+            middle.metric(
+                "Exit code",
+                "None" if run.exit_code is None else run.exit_code,
+            )
+            right.metric("Duration", f"{run.duration_seconds:.2f}s")
+
+            with st.expander("stdout"):
+                st.code(run.stdout or "(empty)")
+            with st.expander("stderr"):
+                st.code(run.stderr or "(empty)")
+
+            if findings:
+                st.subheader("Findings")
+                for finding in findings:
+                    st.warning(f"{finding.category}: {finding.message}")
+                    st.info(finding.suggested_fix)
+            else:
+                st.success("No findings were generated.")
+
+    render_debug_logs(st.session_state["dashboard_logs"])
+
+
+def render_debug_logs(logs: list[str]) -> None:
+    if not logs:
+        return
+
+    with st.expander("Debug logs"):
+        st.code("\n".join(logs))
 
 
 def render_diagnosis_page() -> None:

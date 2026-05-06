@@ -1,9 +1,8 @@
 """Backend API for the workflow sandbox."""
 
-"""Creates api endpoints."""
-
-from pathlib import Path
 from fastapi import FastAPI, HTTPException
+
+from workflow_sandbox.config import DATABASE_PATH
 from workflow_sandbox.core.database import WorkflowDatabase
 from workflow_sandbox.core.diagnosis import diagnose_output
 from workflow_sandbox.core.dockerfile import generate_dockerfile
@@ -12,7 +11,7 @@ from workflow_sandbox.core.runner import DockerUnavailableError, run_workflow_in
 from workflow_sandbox.core.validation import validate_workflow_template
 
 app = FastAPI(title="Python Workflow Sandbox")
-database = WorkflowDatabase(Path("workflow_sandbox.db"))
+database = WorkflowDatabase(DATABASE_PATH)
 database.initialise()
 
 

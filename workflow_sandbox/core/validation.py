@@ -4,6 +4,13 @@ import re
 
 from packaging.version import InvalidVersion, Version
 
+from workflow_sandbox.config import (
+    MAX_PYTHON_VERSION_EXCLUSIVE,
+    MAX_TIMEOUT_SECONDS,
+    MIN_PYTHON_VERSION,
+    MIN_TIMEOUT_SECONDS,
+    SUPPORTED_PYTHON_VERSIONS,
+)
 from workflow_sandbox.core.models import WorkflowTemplate
 
 _WORKFLOW_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]{2,63}$")
@@ -22,8 +29,12 @@ def validate_workflow_template(template: WorkflowTemplate) -> list[str]:
 
     try:
         version = Version(template.python_version)
-        if version < Version("3.8") or version >= Version("3.13"):
-            errors.append("Python version must be between 3.8 and 3.12.")
+        if version < Version(MIN_PYTHON_VERSION) or version >= Version(
+            MAX_PYTHON_VERSION_EXCLUSIVE
+        ):
+            errors.append(
+                f"Python version must be between {MIN_PYTHON_VERSION} and {SUPPORTED_PYTHON_VERSIONS[-1]}."
+            )
     except InvalidVersion:
         errors.append("Python version must be a valid version string.")
 
@@ -40,8 +51,13 @@ def validate_workflow_template(template: WorkflowTemplate) -> list[str]:
     if template.requirements_file.startswith("/"):
         errors.append("Requirements file must be a relative path.")
 
-    if template.timeout_seconds < 5 or template.timeout_seconds > 1800:
-        errors.append("Timeout must be between 5 and 1800 seconds.")
+    if (
+        template.timeout_seconds < MIN_TIMEOUT_SECONDS
+        or template.timeout_seconds > MAX_TIMEOUT_SECONDS
+    ):
+        errors.append(
+            f"Timeout must be between {MIN_TIMEOUT_SECONDS} and {MAX_TIMEOUT_SECONDS} seconds."
+        )
 
     for key in template.env_vars:
         if not _ENV_VAR_PATTERN.match(key):

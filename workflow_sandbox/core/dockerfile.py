@@ -2,6 +2,7 @@
 
 import json
 
+from workflow_sandbox.config import CONTAINER_WORKDIR, PYTHON_IMAGE_VARIANT
 from workflow_sandbox.core.models import WorkflowTemplate
 from workflow_sandbox.core.validation import validate_workflow_template
 
@@ -14,11 +15,10 @@ def generate_dockerfile(template: WorkflowTemplate) -> str:
         joined_errors = "; ".join(validation_errors)
         raise ValueError(f"Invalid workflow template: {joined_errors}")
 
-    # -slim reduces the version size
     lines = [
-        f"FROM python:{template.python_version}-slim",
-        "WORKDIR /workspace",
-        "COPY . /workspace",
+        f"FROM python:{template.python_version}-{PYTHON_IMAGE_VARIANT}",
+        f"WORKDIR {CONTAINER_WORKDIR}",
+        f"COPY . {CONTAINER_WORKDIR}",
     ]
 
     # Protect against env vars breaking Docker syntax

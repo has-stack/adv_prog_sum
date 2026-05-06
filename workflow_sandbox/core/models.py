@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
 
+from workflow_sandbox.config import DEFAULT_REQUIREMENTS_FILE, DEFAULT_TIMEOUT_SECONDS
 
 class RunStatus(str, Enum):
     """Possible states for a workflow run."""
@@ -28,9 +29,9 @@ class WorkflowTemplate:
     name: str
     python_version: str
     commands: list[str]
-    requirements_file: str = "requirements.txt"
+    requirements_file: str = DEFAULT_REQUIREMENTS_FILE
     env_vars: dict[str, str] = field(default_factory=dict)
-    timeout_seconds: int = 120
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS
 
 
 @dataclass

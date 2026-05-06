@@ -7,6 +7,12 @@ import os
 import uuid
 from pathlib import Path
 from tempfile import TemporaryDirectory
+
+from workflow_sandbox.config import (
+    DOCKER_EXECUTABLE,
+    DOCKER_IMAGE_PREFIX,
+    DOCKERFILE_NAME,
+)
 from workflow_sandbox.core.diagnosis import diagnose_output
 from workflow_sandbox.core.dockerfile import generate_dockerfile
 from workflow_sandbox.core.models import (
@@ -34,8 +40,8 @@ def run_workflow_in_docker(
             f"Project path does not exist or is not a directory: {project_path}"
         )
 
-    # Docker requires sudo on many systems, may not be available
-    if shutil.which("docker") is None:
+    # Docker may not be available on all systems
+    if shutil.which(DOCKER_EXECUTABLE) is None:
         raise DockerUnavailableError("Docker CLI was not found on PATH.")
 
     started = time.monotonic()
@@ -48,12 +54,12 @@ def run_workflow_in_docker(
         docker_config.mkdir()
 
         dockerfile = generate_dockerfile(template)
-        (build_context / "Dockerfile").write_text(dockerfile, encoding="utf-8")
+        (build_context / DOCKERFILE_NAME).write_text(dockerfile, encoding="utf-8")
         docker_env = os.environ.copy()
         docker_env["DOCKER_CONFIG"] = str(docker_config)
 
         build_result = subprocess.run(
-            ["docker", "build", "-t", image_tag, "."],
+            [DOCKER_EXECUTABLE, "build", "-t", image_tag, "."],
             cwd=build_context,
             env=docker_env,
             capture_output=True,
@@ -81,7 +87,7 @@ def run_workflow_in_docker(
 
         try:
             run_result = subprocess.run(
-                ["docker", "run", "--rm", image_tag],
+                [DOCKER_EXECUTABLE, "run", "--rm", image_tag],
                 env=docker_env,
                 capture_output=True,
                 text=True,
@@ -128,13 +134,13 @@ def _create_image_tag(workflow_name: str) -> str:
 
     # The workflow name alone is not enough because the same template name can
     # be reused against different sample projects. A short unique suffix avoids
-    # stale image confusion while keeping tags readable during manual testing.
+    # stale image confusion.
     safe_name = workflow_name.lower().replace("_", "-")
     suffix = uuid.uuid4().hex[:8]
-    return f"workflow-sandbox-{safe_name}-{suffix}"
+    return f"{DOCKER_IMAGE_PREFIX}-{safe_name}-{suffix}"
 
 
-# Internal helper to ensure logs are str
+# Internal helper to ensure logs are strings
 def _normalise_output(output: str | bytes | None) -> str:
     if output is None:
         return ""

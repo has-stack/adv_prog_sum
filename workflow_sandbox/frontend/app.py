@@ -1,38 +1,22 @@
 """Streamlit dashboard for the workflow sandbox prototype."""
 
 import streamlit as st
-from pathlib import Path
+
+from workflow_sandbox.config import (
+    DATABASE_PATH,
+    DEFAULT_DIAGNOSIS_DRAFT,
+    DEFAULT_WORKFLOW_DRAFT,
+    MAX_TIMEOUT_SECONDS,
+    MIN_TIMEOUT_SECONDS,
+    SAMPLE_PROJECTS,
+    SUPPORTED_PYTHON_VERSIONS,
+)
 from workflow_sandbox.core.database import WorkflowDatabase
 from workflow_sandbox.core.diagnosis import diagnose_output
 from workflow_sandbox.core.dockerfile import generate_dockerfile
 from workflow_sandbox.core.models import WorkflowTemplate
 from workflow_sandbox.core.runner import DockerUnavailableError, run_workflow_in_docker
 from workflow_sandbox.core.validation import validate_workflow_template
-
-DATABASE_PATH = Path("workflow_sandbox.db")
-# Dummy data
-SAMPLE_PROJECTS = {
-    "Passing project": Path("sample_projects/passing_project"),
-    "Missing dependency": Path("sample_projects/missing_dependency"),
-    "Missing environment variable": Path("sample_projects/missing_env_var"),
-    "Failing tests": Path("sample_projects/failing_tests"),
-}
-PYTHON_VERSIONS = ["3.8", "3.9", "3.10", "3.11", "3.12"]
-WORKFLOW_DRAFT_DEFAULTS = {
-    "name": "python-smoke-test",
-    "python_version": "3.11",
-    "requirements_file": "requirements.txt",
-    "commands_text": "python -m unittest discover -s tests",
-    "env_text": "PYTHONPATH=/workspace",
-    "timeout_seconds": 120,
-    "sample_project": "Passing project",
-}
-DIAGNOSIS_DRAFT_DEFAULTS = {
-    "exit_code": 1,
-    "timed_out": False,
-    "stdout": "",
-    "stderr": "ModuleNotFoundError: No module named 'yaml'",
-}
 
 
 def main() -> None:
@@ -80,8 +64,8 @@ def build_template_from_form(form_key: str) -> WorkflowTemplate:
     )
     python_version = st.selectbox(
         "Python version",
-        PYTHON_VERSIONS,
-        index=PYTHON_VERSIONS.index(draft["python_version"]),
+        SUPPORTED_PYTHON_VERSIONS,
+        index=SUPPORTED_PYTHON_VERSIONS.index(draft["python_version"]),
         key=f"{form_key}-python",
     )
     requirements_file = st.text_input(
@@ -101,8 +85,8 @@ def build_template_from_form(form_key: str) -> WorkflowTemplate:
     )
     timeout_seconds = st.number_input(
         "Timeout seconds",
-        min_value=5,
-        max_value=1800,
+        min_value=MIN_TIMEOUT_SECONDS,
+        max_value=MAX_TIMEOUT_SECONDS,
         value=draft["timeout_seconds"],
         key=f"{form_key}-timeout",
     )
@@ -134,9 +118,9 @@ def ensure_dashboard_state() -> None:
     """Create page-independent draft state for Streamlit reruns."""
 
     if "workflow_draft" not in st.session_state:
-        st.session_state["workflow_draft"] = WORKFLOW_DRAFT_DEFAULTS.copy()
+        st.session_state["workflow_draft"] = DEFAULT_WORKFLOW_DRAFT.copy()
     if "diagnosis_draft" not in st.session_state:
-        st.session_state["diagnosis_draft"] = DIAGNOSIS_DRAFT_DEFAULTS.copy()
+        st.session_state["diagnosis_draft"] = DEFAULT_DIAGNOSIS_DRAFT.copy()
 
 
 def parse_env_vars(text: str) -> dict[str, str]:

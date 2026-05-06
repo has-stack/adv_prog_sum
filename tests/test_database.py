@@ -62,3 +62,47 @@ def test_database_saves_runs_and_findings(tmp_path, caplog):
     assert len(findings) == 1
     assert findings[0].suggested_fix == "Add pyyaml"
     assert f"Saved workflow run id={run_id}" in caplog.text
+
+
+def test_database_lists_run_history_with_finding_summary(tmp_path):
+    database = WorkflowDatabase(tmp_path / "workflow.db")
+    database.initialise()
+
+    first_run_id = database.save_run(
+        WorkflowRun(
+            workflow_name="passing-project",
+            status=RunStatus.PASSED,
+            exit_code=0,
+            duration_seconds=0.5,
+        )
+    )
+    second_run_id = database.save_run(
+        WorkflowRun(
+            workflow_name="missing-env",
+            status=RunStatus.FAILED,
+            exit_code=1,
+            duration_seconds=1.1,
+        ),
+        [
+            Finding(
+                category="missing_environment_variable",
+                severity=Severity.HIGH,
+                message="Missing environment variable",
+                suggested_fix="Set SMMU_TEST_ROOT",
+            ),
+            Finding(
+                category="test_failure",
+                severity=Severity.MEDIUM,
+                message="Test failure",
+                suggested_fix="Inspect assertion",
+            ),
+        ],
+    )
+
+    history = database.list_run_history()
+
+    assert [item.run_id for item in history] == [second_run_id, first_run_id]
+    assert history[0].findings_count == 2
+    assert history[0].primary_finding_category == "missing_environment_variable"
+    assert history[1].findings_count == 0
+    assert history[1].primary_finding_category is None

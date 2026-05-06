@@ -55,3 +55,16 @@ class Finding:
     severity: Severity
     message: str
     suggested_fix: str
+
+
+@dataclass
+class RunHistoryItem:
+    """Dashboard summary for a stored workflow run."""
+
+    run_id: int
+    workflow_name: str
+    status: RunStatus
+    exit_code: int | None
+    duration_seconds: float
+    findings_count: int
+    primary_finding_category: str | None = None

@@ -383,22 +383,25 @@ def render_history_page(database: WorkflowDatabase) -> None:
     st.header("Run History")
     st.caption("Review previous checks and compare repeated failures.")
 
-    runs = database.list_runs()
-    if not runs:
+    history_items = database.list_run_history()
+    if not history_items:
         st.info("No workflow runs have been saved yet.")
         return
 
-    # The history view is table based so repeated failures can be
-    # scanned quickly by a stretched support team.
+    # Finding summaries make recurring drift visible without opening every
+    # run's raw stdout/stderr output.
     st.table(
         [
             {
-                "workflow": run.workflow_name,
-                "status": run.status.value,
-                "exit_code": run.exit_code,
-                "duration": run.duration_seconds,
+                "run_id": item.run_id,
+                "workflow": item.workflow_name,
+                "status": item.status.value,
+                "exit_code": item.exit_code,
+                "duration": item.duration_seconds,
+                "findings": item.findings_count,
+                "primary_diagnosis": item.primary_finding_category or "none",
             }
-            for run in runs
+            for item in history_items
         ]
     )
 

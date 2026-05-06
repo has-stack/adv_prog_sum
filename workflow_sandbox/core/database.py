@@ -7,6 +7,7 @@ from pathlib import Path
 
 from workflow_sandbox.core.models import (
     Finding,
+    RunHistoryItem,
     RunStatus,
     Severity,
     WorkflowRun,
@@ -176,6 +177,49 @@ class WorkflowDatabase:
             for row in rows
         ]
 
+    def list_run_history(self) -> list[RunHistoryItem]:
+        """Return stored runs with finding summaries for dashboard triage."""
+
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    workflow_runs.id,
+                    workflow_runs.workflow_name,
+                    workflow_runs.status,
+                    workflow_runs.exit_code,
+                    workflow_runs.duration_seconds,
+                    COUNT(findings.id) AS findings_count,
+                    MIN(findings.id) AS primary_finding_id
+                FROM workflow_runs
+                LEFT JOIN findings ON findings.run_id = workflow_runs.id
+                GROUP BY workflow_runs.id
+                ORDER BY workflow_runs.id DESC
+                """
+            ).fetchall()
+
+            primary_ids = [
+                row["primary_finding_id"]
+                for row in rows
+                if row["primary_finding_id"] is not None
+            ]
+            primary_categories = self._load_finding_categories(connection, primary_ids)
+
+        return [
+            RunHistoryItem(
+                run_id=row["id"],
+                workflow_name=row["workflow_name"],
+                status=RunStatus(row["status"]),
+                exit_code=row["exit_code"],
+                duration_seconds=row["duration_seconds"],
+                findings_count=row["findings_count"],
+                primary_finding_category=primary_categories.get(
+                    row["primary_finding_id"]
+                ),
+            )
+            for row in rows
+        ]
+
     def list_findings_for_run(self, run_id: int) -> list[Finding]:
         """Return findings for a stored run."""
 
@@ -204,3 +248,22 @@ class WorkflowDatabase:
         connection = sqlite3.connect(self.database_path)
         connection.row_factory = sqlite3.Row
         return connection
+
+    def _load_finding_categories(
+        self,
+        connection: sqlite3.Connection,
+        finding_ids: list[int],
+    ) -> dict[int, str]:
+        if not finding_ids:
+            return {}
+
+        placeholders = ", ".join("?" for _ in finding_ids)
+        rows = connection.execute(
+            f"""
+            SELECT id, category
+            FROM findings
+            WHERE id IN ({placeholders})
+            """,
+            finding_ids,
+        ).fetchall()
+        return {row["id"]: row["category"] for row in rows}

@@ -7,6 +7,7 @@ environment assumptions across the frontend, backend and core services.
 from pathlib import Path
 
 DATABASE_PATH = Path("workflow_sandbox.db")
+DIAGNOSIS_RULES_PATH = Path("workflow_sandbox/rules/diagnosis_rules.json")
 
 CONTAINER_WORKDIR = "/workspace"
 PYTHON_IMAGE_VARIANT = "slim"
@@ -45,4 +46,3 @@ DEFAULT_DIAGNOSIS_DRAFT = {
     "stdout": "",
     "stderr": "ModuleNotFoundError: No module named 'yaml'",
 }
-

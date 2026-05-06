@@ -1,0 +1,42 @@
+[
+  {
+    "name": "missing_python_dependency",
+    "category": "missing_dependency",
+    "severity": "medium",
+    "pattern": "ModuleNotFoundError: No module named ['\\\"]([^'\\\"]+)['\\\"]",
+    "message": "Python module '{module_name}' is missing from the environment.",
+    "suggested_fix": "Add '{package_name}' to requirements.txt and rerun the workflow.",
+    "groups": ["module_name"],
+    "package_hints": {
+      "yaml": "pyyaml",
+      "cv2": "opencv-python"
+    }
+  },
+  {
+    "name": "missing_environment_variable",
+    "category": "missing_environment_variable",
+    "severity": "high",
+    "pattern": "KeyError: ['\\\"]([A-Z_][A-Z0-9_]*)['\\\"]",
+    "message": "Environment variable '{env_name}' was not available during the workflow.",
+    "suggested_fix": "Define '{env_name}' in the workflow template or provide a safe default.",
+    "groups": ["env_name"]
+  },
+  {
+    "name": "missing_system_tool",
+    "category": "missing_system_tool",
+    "severity": "high",
+    "pattern": "([a-zA-Z0-9_.+-]+): not found",
+    "message": "System command '{command_name}' is missing from the container.",
+    "suggested_fix": "Install the package that provides '{command_name}' before running the workflow.",
+    "groups": ["command_name"]
+  },
+  {
+    "name": "test_failure",
+    "category": "test_failure",
+    "severity": "medium",
+    "pattern": "FAILED|AssertionError",
+    "message": "The workflow ran, but one or more functional tests failed.",
+    "suggested_fix": "Inspect the failing assertion and compare expected behaviour with the implementation.",
+    "groups": []
+  }
+]

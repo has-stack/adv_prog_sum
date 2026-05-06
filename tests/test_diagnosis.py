@@ -1,4 +1,11 @@
-from workflow_sandbox.core.diagnosis import diagnose_output
+from workflow_sandbox.core.diagnosis import diagnose_output, load_diagnosis_rules
+
+
+def test_diagnosis_rules_load_from_config_file():
+    rules = load_diagnosis_rules()
+
+    assert any(rule["category"] == "missing_dependency" for rule in rules)
+    assert any(rule["category"] == "test_failure" for rule in rules)
 
 
 def test_diagnosis_detects_missing_dependency_and_package_hint():

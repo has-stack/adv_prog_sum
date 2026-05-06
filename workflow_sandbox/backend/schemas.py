@@ -1,4 +1,5 @@
 """Request models for the FastAPI boundary."""
+
 """This separation ensures the core data-classes remain framework free, and therefore more testable & resilient."""
 
 from pydantic import BaseModel, ConfigDict, Field

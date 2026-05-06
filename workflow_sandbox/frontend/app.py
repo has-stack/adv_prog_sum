@@ -25,6 +25,15 @@ from workflow_sandbox.logging_config import configure_logging
 
 configure_logging()
 
+RUN_FORM_KEYS = {
+    "name": "run-name",
+    "python_version": "run-python",
+    "requirements_file": "run-requirements",
+    "commands_text": "run-commands",
+    "env_text": "run-env",
+    "timeout_seconds": "run-timeout",
+}
+
 
 def main() -> None:
     st.set_page_config(page_title="Workflow Sandbox", layout="wide")
@@ -146,6 +155,42 @@ def parse_env_vars(text: str) -> dict[str, str]:
     return env_vars
 
 
+def format_env_vars(env_vars: dict[str, str]) -> str:
+    """Format environment variables for the dashboard text area."""
+
+    return "\n".join(f"{key}={value}" for key, value in sorted(env_vars.items()))
+
+
+def workflow_template_to_draft(
+    template: WorkflowTemplate,
+    sample_project: str,
+) -> dict:
+    """Convert a saved workflow template into dashboard draft state."""
+
+    return {
+        "name": template.name,
+        "python_version": template.python_version,
+        "requirements_file": template.requirements_file,
+        "commands_text": "\n".join(template.commands),
+        "env_text": format_env_vars(template.env_vars),
+        "timeout_seconds": template.timeout_seconds,
+        "sample_project": sample_project,
+    }
+
+
+def load_template_into_run_form(template: WorkflowTemplate) -> None:
+    """Load a saved template into the run form without changing the project."""
+
+    sample_project = st.session_state["workflow_draft"]["sample_project"]
+    draft = workflow_template_to_draft(template, sample_project)
+    st.session_state["workflow_draft"] = draft
+
+    # Streamlit keeps widget values under their explicit keys. Updating only
+    # workflow_draft would not refresh already-rendered run form widgets.
+    for draft_key, widget_key in RUN_FORM_KEYS.items():
+        st.session_state[widget_key] = draft[draft_key]
+
+
 def render_template_page(database: WorkflowDatabase) -> None:
     st.header("Workflow Template")
     st.caption("Create a reusable Python workflow definition.")
@@ -213,6 +258,8 @@ def render_run_page(database: WorkflowDatabase) -> None:
     st.session_state["workflow_draft"]["sample_project"] = project_label
 
     project_path = SAMPLE_PROJECTS[project_label]
+    render_saved_template_loader(database)
+
     template = build_template_from_form("run")
     errors = validate_workflow_template(template)
 
@@ -263,6 +310,24 @@ def render_run_page(database: WorkflowDatabase) -> None:
                 st.success("No findings were generated.")
 
     render_debug_logs(st.session_state["dashboard_logs"])
+
+
+def render_saved_template_loader(database: WorkflowDatabase) -> None:
+    templates = database.list_templates()
+    if not templates:
+        st.info("No saved workflow templates yet.")
+        return
+
+    templates_by_name = {template.name: template for template in templates}
+    selected_name = st.selectbox(
+        "Saved workflow template",
+        list(templates_by_name),
+        key="run-template-loader",
+    )
+
+    if st.button("Load template"):
+        load_template_into_run_form(templates_by_name[selected_name])
+        st.success(f"Loaded template: {selected_name}")
 
 
 def render_debug_logs(logs: list[str]) -> None:

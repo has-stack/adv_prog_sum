@@ -23,6 +23,10 @@ MAX_TIMEOUT_SECONDS = 1800
 DEFAULT_TIMEOUT_SECONDS = 120
 DEFAULT_REQUIREMENTS_FILE = "requirements.txt"
 
+ALLOWED_PROJECT_ROOTS = [
+    Path("sample_projects"),
+]
+
 SAMPLE_PROJECTS = {
     "Passing project": Path("sample_projects/passing_project"),
     "Missing dependency": Path("sample_projects/missing_dependency"),

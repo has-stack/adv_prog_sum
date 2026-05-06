@@ -12,3 +12,9 @@ def test_sample_project_config_contains_expected_demo_projects():
     assert "Missing environment variable" in config.SAMPLE_PROJECTS
     assert "Failing tests" in config.SAMPLE_PROJECTS
 
+
+def test_allowed_project_roots_are_configurable():
+    assert config.ALLOWED_PROJECT_ROOTS
+    assert config.SAMPLE_PROJECTS["Passing project"].is_relative_to(
+        config.ALLOWED_PROJECT_ROOTS[0]
+    )

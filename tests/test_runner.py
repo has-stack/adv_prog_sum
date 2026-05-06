@@ -34,7 +34,7 @@ def test_runner_reports_docker_unavailable(monkeypatch, tmp_path):
     )
 
     with pytest.raises(DockerUnavailableError):
-        run_workflow_in_docker(template, project_path)
+        run_workflow_in_docker(template, project_path, allowed_roots=[tmp_path])
 
 
 def test_runner_classifies_docker_build_failure(monkeypatch, tmp_path):
@@ -57,7 +57,11 @@ def test_runner_classifies_docker_build_failure(monkeypatch, tmp_path):
         commands=["python -m unittest discover -s tests"],
     )
 
-    run, findings = run_workflow_in_docker(template, project_path)
+    run, findings = run_workflow_in_docker(
+        template,
+        project_path,
+        allowed_roots=[tmp_path],
+    )
 
     assert run.status == RunStatus.FAILED
     assert findings[0].category == "docker_daemon_unavailable"
@@ -83,7 +87,11 @@ def test_runner_classifies_docker_build_timeout(monkeypatch, tmp_path):
         commands=["python -m unittest discover -s tests"],
     )
 
-    run, findings = run_workflow_in_docker(template, project_path)
+    run, findings = run_workflow_in_docker(
+        template,
+        project_path,
+        allowed_roots=[tmp_path],
+    )
 
     assert run.status == RunStatus.TIMEOUT
     assert run.stdout == "building image"

@@ -1,10 +1,13 @@
 """Basic validation for workflow templates."""
 
 import re
+from collections.abc import Iterable
+from pathlib import Path
 
 from packaging.version import InvalidVersion, Version
 
 from workflow_sandbox.config import (
+    ALLOWED_PROJECT_ROOTS,
     MAX_PYTHON_VERSION_EXCLUSIVE,
     MAX_TIMEOUT_SECONDS,
     MIN_PYTHON_VERSION,
@@ -70,3 +73,38 @@ def is_valid_workflow_template(template: WorkflowTemplate) -> bool:
     """Return True when the workflow template has no validation errors."""
 
     return len(validate_workflow_template(template)) == 0
+
+
+def resolve_allowed_project_path(
+    project_path: str | Path,
+    allowed_roots: Iterable[Path] | None = None,
+) -> Path:
+    """Return a resolved project path if it is inside an allowed root."""
+
+    roots = list(ALLOWED_PROJECT_ROOTS if allowed_roots is None else allowed_roots)
+    if not roots:
+        raise ValueError("No allowed project roots are configured.")
+
+    resolved_path = Path(project_path).expanduser().resolve()
+    if not resolved_path.exists() or not resolved_path.is_dir():
+        raise ValueError(
+            f"Project path does not exist or is not a directory: {project_path}"
+        )
+
+    # Resolve before comparing so traversal paths such as
+    # sample_projects/../workflow_sandbox cannot bypass the allowlist.
+    resolved_roots = [Path(root).expanduser().resolve() for root in roots]
+    if not any(_is_path_inside_root(resolved_path, root) for root in resolved_roots):
+        raise ValueError(
+            "Project path must be inside one of the configured allowed project roots."
+        )
+
+    return resolved_path
+
+
+def _is_path_inside_root(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True

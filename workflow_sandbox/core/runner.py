@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import time
 import uuid
+from collections.abc import Iterable
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -15,6 +16,7 @@ from workflow_sandbox.config import (
 )
 from workflow_sandbox.core.diagnosis import DOCKER_BUILD_STAGE, diagnose_output
 from workflow_sandbox.core.dockerfile import generate_dockerfile
+from workflow_sandbox.core.validation import resolve_allowed_project_path
 from workflow_sandbox.core.models import (
     Finding,
     RunStatus,
@@ -30,15 +32,11 @@ class DockerUnavailableError(RuntimeError):
 def run_workflow_in_docker(
     template: WorkflowTemplate,
     project_path: str | Path,
+    allowed_roots: Iterable[Path] | None = None,
 ) -> tuple[WorkflowRun, list[Finding]]:
     """Build and run a Python workflow inside a Docker container."""
 
-    # Path data structure needed for different OS
-    project_path = Path(project_path)
-    if not project_path.exists() or not project_path.is_dir():
-        raise ValueError(
-            f"Project path does not exist or is not a directory: {project_path}"
-        )
+    project_path = resolve_allowed_project_path(project_path, allowed_roots)
 
     # Docker may not be available on all systems
     if shutil.which(DOCKER_EXECUTABLE) is None:

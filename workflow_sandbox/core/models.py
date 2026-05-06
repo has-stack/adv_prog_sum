@@ -5,6 +5,7 @@ from enum import Enum
 
 from workflow_sandbox.config import DEFAULT_REQUIREMENTS_FILE, DEFAULT_TIMEOUT_SECONDS
 
+
 class RunStatus(str, Enum):
     """Possible states for a workflow run."""
 

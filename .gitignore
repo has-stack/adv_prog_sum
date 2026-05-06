@@ -1,0 +1,24 @@
+# Python bytecode/cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Test/tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local environments
+.venv/
+venv/
+env/
+
+# Local runtime data
+workflow_sandbox.db
+*.sqlite
+*.sqlite3
+*.log
+logs/
+

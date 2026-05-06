@@ -10,6 +10,9 @@ the generated Dockerfile, run the workflow inside an isolated Docker container,
 capture stdout/stderr/exit status, classify common failures and review previous
 runs through a Streamlit dashboard.
 
+NOTE: This repo has been ported over from a private internal repo, the commit history has
+been preserved to the best degree possible.
+
 ## Key Features
 
 - Streamlit dashboard for running environment checks and reviewing history.

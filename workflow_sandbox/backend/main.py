@@ -2,6 +2,11 @@
 
 from fastapi import FastAPI, HTTPException
 
+from workflow_sandbox.backend.schemas import (
+    DiagnosisRequest,
+    RunWorkflowRequest,
+    WorkflowTemplateRequest,
+)
 from workflow_sandbox.config import DATABASE_PATH
 from workflow_sandbox.core.database import WorkflowDatabase
 from workflow_sandbox.core.diagnosis import diagnose_output
@@ -21,7 +26,8 @@ def health() -> dict[str, str]:
 
 
 @app.post("/templates")
-def save_template(template: WorkflowTemplate) -> dict[str, str]:
+def save_template(template_request: WorkflowTemplateRequest) -> dict[str, str]:
+    template = template_request.to_domain()
     errors = validate_workflow_template(template)
     if errors:
         raise HTTPException(status_code=400, detail=errors)
@@ -36,7 +42,8 @@ def list_templates() -> list[WorkflowTemplate]:
 
 
 @app.post("/dockerfile/preview")
-def preview_dockerfile(template: WorkflowTemplate) -> dict[str, str]:
+def preview_dockerfile(template_request: WorkflowTemplateRequest) -> dict[str, str]:
+    template = template_request.to_domain()
     try:
         dockerfile = generate_dockerfile(template)
     except ValueError as error:
@@ -46,12 +53,12 @@ def preview_dockerfile(template: WorkflowTemplate) -> dict[str, str]:
 
 
 @app.post("/diagnose")
-def diagnose(payload: dict) -> dict:
+def diagnose(payload: DiagnosisRequest) -> dict:
     findings = diagnose_output(
-        stdout=payload.get("stdout", ""),
-        stderr=payload.get("stderr", ""),
-        exit_code=payload.get("exit_code"),
-        timed_out=payload.get("timed_out", False),
+        stdout=payload.stdout,
+        stderr=payload.stderr,
+        exit_code=payload.exit_code,
+        timed_out=payload.timed_out,
     )
     return {"findings": findings}
 
@@ -62,24 +69,8 @@ def list_runs() -> dict:
 
 
 @app.post("/runs")
-def run_workflow(payload: dict) -> dict:
-    # The request body is still deliberately simple at this stage.
-    try:
-        template = WorkflowTemplate(**payload["template"])
-    except KeyError as error:
-        raise HTTPException(
-            status_code=400, detail="Request body must include a template."
-        ) from error
-    except TypeError as error:
-        raise HTTPException(
-            status_code=400, detail="Template fields are invalid."
-        ) from error
-
-    project_path = payload.get("project_path")
-    if not project_path:
-        raise HTTPException(
-            status_code=400, detail="Request body must include a project_path."
-        )
+def run_workflow(payload: RunWorkflowRequest) -> dict:
+    template = payload.template.to_domain()
 
     # Validation happens before Docker is called. This prevents avoidable Docker
     # builds for broken workflow names, invalid python versions or empty
@@ -89,7 +80,7 @@ def run_workflow(payload: dict) -> dict:
         raise HTTPException(status_code=400, detail=errors)
 
     try:
-        run, findings = run_workflow_in_docker(template, project_path)
+        run, findings = run_workflow_in_docker(template, payload.project_path)
     except DockerUnavailableError as error:
         # Docker is infrastructure rather than user input. A 503 tells users
         # that the process cannot currently execute workflows, rather than that

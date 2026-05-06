@@ -5,6 +5,7 @@ import pytest
 from workflow_sandbox.core.models import WorkflowTemplate
 from workflow_sandbox.core.runner import (
     DockerUnavailableError,
+    _create_image_tag,
     _normalise_output,
     run_workflow_in_docker,
 )
@@ -39,3 +40,12 @@ def test_normalise_output_handles_none_bytes_and_string():
     assert _normalise_output(None) == ""
     assert _normalise_output(b"hello") == "hello"
     assert _normalise_output("already text") == "already text"
+
+
+def test_create_image_tag_is_readable_and_unique():
+    first = _create_image_tag("python_smoke_test")
+    second = _create_image_tag("python_smoke_test")
+
+    assert first.startswith("workflow-sandbox-python-smoke-test-")
+    assert second.startswith("workflow-sandbox-python-smoke-test-")
+    assert first != second

@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import time
 import os
+import uuid
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from workflow_sandbox.core.diagnosis import diagnose_output
@@ -38,7 +39,7 @@ def run_workflow_in_docker(
         raise DockerUnavailableError("Docker CLI was not found on PATH.")
 
     started = time.monotonic()
-    image_tag = f"workflow-sandbox-{template.name.lower().replace('_', '-')}"
+    image_tag = _create_image_tag(template.name)
 
     with TemporaryDirectory() as temp_directory:
         build_context = Path(temp_directory) / "context"
@@ -120,6 +121,17 @@ def run_workflow_in_docker(
         timed_out=timed_out,
     )
     return run, findings
+
+
+def _create_image_tag(workflow_name: str) -> str:
+    """Create a unique Docker image tag for a workflow run."""
+
+    # The workflow name alone is not enough because the same template name can
+    # be reused against different sample projects. A short unique suffix avoids
+    # stale image confusion while keeping tags readable during manual testing.
+    safe_name = workflow_name.lower().replace("_", "-")
+    suffix = uuid.uuid4().hex[:8]
+    return f"workflow-sandbox-{safe_name}-{suffix}"
 
 
 # Internal helper to ensure logs are str

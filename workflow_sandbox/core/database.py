@@ -1,8 +1,10 @@
 """SQLite database access for workflow templates, runs and findings."""
 
 import json
+import logging
 import sqlite3
 from pathlib import Path
+
 from workflow_sandbox.core.models import (
     Finding,
     RunStatus,
@@ -10,6 +12,8 @@ from workflow_sandbox.core.models import (
     WorkflowRun,
     WorkflowTemplate,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class WorkflowDatabase:
@@ -54,6 +58,7 @@ class WorkflowDatabase:
                 );
                 """
             )
+        logger.info("Initialised workflow database at %s", self.database_path)
 
     def save_template(self, template: WorkflowTemplate) -> None:
         """Store or replace a workflow template."""
@@ -74,6 +79,7 @@ class WorkflowDatabase:
                     template.timeout_seconds,
                 ),
             )
+        logger.info("Saved workflow template %s", template.name)
 
     def list_templates(self) -> list[WorkflowTemplate]:
         """Return stored workflow templates by name."""
@@ -137,6 +143,13 @@ class WorkflowDatabase:
                     ),
                 )
 
+        logger.info(
+            "Saved workflow run id=%s name=%s status=%s findings=%s",
+            run_id,
+            run.workflow_name,
+            run.status.value,
+            len(findings),
+        )
         return run_id
 
     def list_runs(self) -> list[WorkflowRun]:

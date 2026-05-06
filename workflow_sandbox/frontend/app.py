@@ -11,12 +11,15 @@ from workflow_sandbox.config import (
     SAMPLE_PROJECTS,
     SUPPORTED_PYTHON_VERSIONS,
 )
+from workflow_sandbox.logging_config import configure_logging
 from workflow_sandbox.core.database import WorkflowDatabase
 from workflow_sandbox.core.diagnosis import diagnose_output
 from workflow_sandbox.core.dockerfile import generate_dockerfile
 from workflow_sandbox.core.models import WorkflowTemplate
 from workflow_sandbox.core.runner import DockerUnavailableError, run_workflow_in_docker
 from workflow_sandbox.core.validation import validate_workflow_template
+
+configure_logging()
 
 
 def main() -> None:

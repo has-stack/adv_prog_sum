@@ -14,6 +14,8 @@ PYTHON_IMAGE_VARIANT = "slim"
 DOCKER_EXECUTABLE = "docker"
 DOCKER_IMAGE_PREFIX = "workflow-sandbox"
 DOCKERFILE_NAME = "Dockerfile"
+LOG_LEVEL = "INFO"
+LOG_FORMAT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
 
 SUPPORTED_PYTHON_VERSIONS = ["3.8", "3.9", "3.10", "3.11", "3.12"]
 MIN_PYTHON_VERSION = "3.8"

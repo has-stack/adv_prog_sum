@@ -1,3 +1,4 @@
+import logging
 import shutil
 import subprocess
 
@@ -37,10 +38,11 @@ def test_runner_reports_docker_unavailable(monkeypatch, tmp_path):
         run_workflow_in_docker(template, project_path, allowed_roots=[tmp_path])
 
 
-def test_runner_classifies_docker_build_failure(monkeypatch, tmp_path):
+def test_runner_classifies_docker_build_failure(monkeypatch, tmp_path, caplog):
     project_path = tmp_path / "project"
     project_path.mkdir()
     monkeypatch.setattr(shutil, "which", lambda command: "/usr/bin/docker")
+    caplog.set_level(logging.WARNING, logger="workflow_sandbox.core.runner")
 
     def fake_run(*args, **kwargs):
         return subprocess.CompletedProcess(
@@ -65,6 +67,8 @@ def test_runner_classifies_docker_build_failure(monkeypatch, tmp_path):
 
     assert run.status == RunStatus.FAILED
     assert findings[0].category == "docker_daemon_unavailable"
+    assert "Docker image build failed" in caplog.text
+    assert "Cannot connect to the Docker daemon" not in caplog.text
 
 
 def test_runner_classifies_docker_build_timeout(monkeypatch, tmp_path):

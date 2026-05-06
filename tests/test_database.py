@@ -1,3 +1,5 @@
+import logging
+
 from workflow_sandbox.core.database import WorkflowDatabase
 from workflow_sandbox.core.models import (
     Finding,
@@ -28,9 +30,10 @@ def test_database_saves_and_lists_templates(tmp_path):
     assert templates[0].env_vars == {"PYTHONPATH": "/workspace"}
 
 
-def test_database_saves_runs_and_findings(tmp_path):
+def test_database_saves_runs_and_findings(tmp_path, caplog):
     database = WorkflowDatabase(tmp_path / "workflow.db")
     database.initialise()
+    caplog.set_level(logging.INFO, logger="workflow_sandbox.core.database")
 
     run_id = database.save_run(
         WorkflowRun(
@@ -58,3 +61,4 @@ def test_database_saves_runs_and_findings(tmp_path):
     assert runs[0].status == RunStatus.FAILED
     assert len(findings) == 1
     assert findings[0].suggested_fix == "Add pyyaml"
+    assert f"Saved workflow run id={run_id}" in caplog.text

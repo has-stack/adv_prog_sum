@@ -1,5 +1,6 @@
 """Docker-based workflow execution."""
 
+import logging
 import os
 import shutil
 import subprocess
@@ -16,13 +17,15 @@ from workflow_sandbox.config import (
 )
 from workflow_sandbox.core.diagnosis import DOCKER_BUILD_STAGE, diagnose_output
 from workflow_sandbox.core.dockerfile import generate_dockerfile
-from workflow_sandbox.core.validation import resolve_allowed_project_path
 from workflow_sandbox.core.models import (
     Finding,
     RunStatus,
     WorkflowRun,
     WorkflowTemplate,
 )
+from workflow_sandbox.core.validation import resolve_allowed_project_path
+
+logger = logging.getLogger(__name__)
 
 
 class DockerUnavailableError(RuntimeError):
@@ -40,10 +43,17 @@ def run_workflow_in_docker(
 
     # Docker may not be available on all systems
     if shutil.which(DOCKER_EXECUTABLE) is None:
+        logger.error("Docker CLI was not found on PATH")
         raise DockerUnavailableError("Docker CLI was not found on PATH.")
 
     started = time.monotonic()
     image_tag = _create_image_tag(template.name)
+    logger.info(
+        "Starting Docker workflow run name=%s project=%s image=%s",
+        template.name,
+        project_path,
+        image_tag,
+    )
 
     with TemporaryDirectory() as temp_directory:
         build_context = Path(temp_directory) / "context"
@@ -57,6 +67,7 @@ def run_workflow_in_docker(
         docker_env["DOCKER_CONFIG"] = str(docker_config)
 
         try:
+            logger.info("Building Docker image %s", image_tag)
             build_result = subprocess.run(
                 [DOCKER_EXECUTABLE, "build", "-t", image_tag, "."],
                 cwd=build_context,
@@ -70,6 +81,12 @@ def run_workflow_in_docker(
             duration = time.monotonic() - started
             stdout = _normalise_output(error.stdout)
             stderr = _normalise_output(error.stderr)
+            logger.warning(
+                "Docker image build timed out name=%s timeout=%s duration=%.2f",
+                template.name,
+                template.timeout_seconds,
+                duration,
+            )
             run = WorkflowRun(
                 workflow_name=template.name,
                 status=RunStatus.TIMEOUT,
@@ -89,6 +106,12 @@ def run_workflow_in_docker(
 
         if build_result.returncode != 0:
             duration = time.monotonic() - started
+            logger.warning(
+                "Docker image build failed name=%s exit_code=%s duration=%.2f",
+                template.name,
+                build_result.returncode,
+                duration,
+            )
             run = WorkflowRun(
                 workflow_name=template.name,
                 status=RunStatus.FAILED,
@@ -109,6 +132,7 @@ def run_workflow_in_docker(
             return run, findings
 
         try:
+            logger.info("Running Docker image %s", image_tag)
             run_result = subprocess.run(
                 [DOCKER_EXECUTABLE, "run", "--rm", image_tag],
                 env=docker_env,
@@ -126,6 +150,11 @@ def run_workflow_in_docker(
             stdout = _normalise_output(error.stdout)
             stderr = _normalise_output(error.stderr)
             exit_code = None
+            logger.warning(
+                "Docker workflow run timed out name=%s timeout=%s",
+                template.name,
+                template.timeout_seconds,
+            )
 
     duration = time.monotonic() - started
     if timed_out:
@@ -148,6 +177,16 @@ def run_workflow_in_docker(
         stderr=stderr,
         exit_code=exit_code,
         timed_out=timed_out,
+    )
+    # Raw stdout/stderr are intentionally not written to application logs
+    # because workflow output can contain paths, credentials or environment data.
+    logger.info(
+        "Completed Docker workflow run name=%s status=%s exit_code=%s duration=%.2f findings=%s",
+        template.name,
+        status.value,
+        exit_code,
+        duration,
+        len(findings),
     )
     return run, findings
 

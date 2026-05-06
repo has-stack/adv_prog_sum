@@ -3,6 +3,7 @@
 import streamlit as st
 
 from workflow_sandbox.config import (
+    APP_NAME,
     DATABASE_PATH,
     DEFAULT_DIAGNOSIS_DRAFT,
     DEFAULT_WORKFLOW_DRAFT,
@@ -36,8 +37,8 @@ RUN_FORM_KEYS = {
 
 
 def main() -> None:
-    st.set_page_config(page_title="Workflow Sandbox", layout="wide")
-    st.title("Python Workflow Sandbox")
+    st.set_page_config(page_title=APP_NAME, layout="wide")
+    st.title(APP_NAME)
     ensure_dashboard_state()
 
     database = WorkflowDatabase(DATABASE_PATH)
@@ -46,21 +47,21 @@ def main() -> None:
     page = st.sidebar.radio(
         "View",
         [
-            "Run Workflow",
-            "Workflow Template",
-            "Dockerfile Preview",
-            "Diagnose Logs",
+            "Run Check",
+            "Workflow Templates",
+            "Container Preview",
+            "Log Diagnosis",
             "Run History",
         ],
     )
 
-    if page == "Run Workflow":
+    if page == "Run Check":
         render_run_page(database)
-    elif page == "Workflow Template":
+    elif page == "Workflow Templates":
         render_template_page(database)
-    elif page == "Dockerfile Preview":
+    elif page == "Container Preview":
         render_dockerfile_page()
-    elif page == "Diagnose Logs":
+    elif page == "Log Diagnosis":
         render_diagnosis_page()
     else:
         render_history_page(database)
@@ -192,8 +193,8 @@ def load_template_into_run_form(template: WorkflowTemplate) -> None:
 
 
 def render_template_page(database: WorkflowDatabase) -> None:
-    st.header("Workflow Template")
-    st.caption("Create a reusable Python workflow definition.")
+    st.header("Workflow Templates")
+    st.caption("Create reusable environment checks for different projects.")
 
     template = build_template_from_form("template")
     errors = validate_workflow_template(template)
@@ -229,8 +230,8 @@ def render_template_page(database: WorkflowDatabase) -> None:
 
 
 def render_dockerfile_page() -> None:
-    st.header("Dockerfile Preview")
-    st.caption("Preview the container definition before workflow execution is added.")
+    st.header("Container Preview")
+    st.caption("Inspect the generated Dockerfile before running the check.")
 
     template = build_template_from_form("dockerfile")
     errors = validate_workflow_template(template)
@@ -245,8 +246,10 @@ def render_dockerfile_page() -> None:
 
 
 def render_run_page(database: WorkflowDatabase) -> None:
-    st.header("Run Workflow")
-    st.caption("Execute a synthetic Python project inside the Docker sandbox.")
+    st.header("Run Check")
+    st.caption(
+        "Run a workflow template against a selected project to detect environment drift."
+    )
 
     draft = st.session_state["workflow_draft"]
     project_names = list(SAMPLE_PROJECTS)
@@ -270,9 +273,9 @@ def render_run_page(database: WorkflowDatabase) -> None:
         st.success("Workflow is ready to run.")
 
     # The UI shows the project path so the execution input is transparent.
-    st.write(f"Project path: `{project_path}`")
+    st.write(f"Selected project path: `{project_path}`")
 
-    if st.button("Run workflow", disabled=bool(errors)):
+    if st.button("Run check", disabled=bool(errors)):
         logs = st.session_state["dashboard_logs"]
         clear_dashboard_logs(logs)
         try:
@@ -339,8 +342,8 @@ def render_debug_logs(logs: list[str]) -> None:
 
 
 def render_diagnosis_page() -> None:
-    st.header("Diagnose Logs")
-    st.caption("Paste workflow output to test the rule-based diagnosis engine.")
+    st.header("Log Diagnosis")
+    st.caption("Paste workflow output to classify failures without running Docker.")
 
     diagnosis_draft = st.session_state["diagnosis_draft"]
     exit_code = st.number_input("Exit code", value=diagnosis_draft["exit_code"])
@@ -378,7 +381,7 @@ def render_diagnosis_page() -> None:
 
 def render_history_page(database: WorkflowDatabase) -> None:
     st.header("Run History")
-    st.caption("Stored workflow runs will appear here after execution is connected.")
+    st.caption("Review previous checks and compare repeated failures.")
 
     runs = database.list_runs()
     if not runs:

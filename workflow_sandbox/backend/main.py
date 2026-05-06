@@ -9,7 +9,7 @@ from workflow_sandbox.backend.schemas import (
     RunWorkflowRequest,
     WorkflowTemplateRequest,
 )
-from workflow_sandbox.config import DATABASE_PATH
+from workflow_sandbox.config import APP_NAME, DATABASE_PATH
 from workflow_sandbox.logging_config import configure_logging
 from workflow_sandbox.core.database import WorkflowDatabase
 from workflow_sandbox.core.diagnosis import diagnose_output
@@ -21,7 +21,7 @@ from workflow_sandbox.core.validation import validate_workflow_template
 configure_logging()
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Python Workflow Sandbox")
+app = FastAPI(title=APP_NAME)
 database = WorkflowDatabase(DATABASE_PATH)
 database.initialise()
 

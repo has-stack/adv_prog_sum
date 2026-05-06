@@ -6,6 +6,7 @@ environment assumptions across the frontend, backend and core services.
 
 from pathlib import Path
 
+APP_NAME = "Python Environment Drift Manager"
 DATABASE_PATH = Path("workflow_sandbox.db")
 DIAGNOSIS_RULES_PATH = Path("workflow_sandbox/rules/diagnosis_rules.json")
 
